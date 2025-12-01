@@ -146,7 +146,8 @@
     <!-- JavaScript Logic -->
     <script>
         const API_URL_BASE = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent";
-        const API_KEY = ""; // Canvas environment provides this if empty
+        // --- API Key Inserted Here ---
+        const API_KEY = "AIzaSyDNqIDiUXcXVoeFkvjGnnfstmmcmDglo_s";
 
         // UI Elements
         const videoFeed = document.getElementById('video-feed');
@@ -185,9 +186,10 @@
         // --- CHART UTILITIES ---
         function renderMacroChart(data) {
             const ctx = document.getElementById('macroChart').getContext('2d');
-            const proteinPct = (data.protein / (data.protein + data.fats + data.carbs)) * 100 || 0;
-            const fatsPct = (data.fats / (data.protein + data.fats + data.carbs)) * 100 || 0;
-            const carbsPct = (data.carbs / (data.protein + data.fats + data.carbs)) * 100 || 0;
+            const totalMacros = data.protein + data.fats + data.carbs;
+            const proteinPct = (data.protein / totalMacros) * 100 || 0;
+            const fatsPct = (data.fats / totalMacros) * 100 || 0;
+            const carbsPct = (data.carbs / totalMacros) * 100 || 0;
 
             const macroData = {
                 labels: ['Protein', 'Fats', 'Carbs'],
@@ -327,7 +329,11 @@
             cameraGroup.classList.add('hidden');
             
             // Enable button for text input
-            captureButton.disabled = false;
+            if (textPromptInput.value.trim().length >= 10) {
+                 captureButton.disabled = false;
+            } else {
+                 captureButton.disabled = true;
+            }
             captureButton.textContent = "Analyze Text Description";
         }
 
@@ -371,15 +377,6 @@
                         ...(promptText ? [{ text: `The user describes the food as: "${promptText}"` }] : [])
                     ]
                 }];
-
-                const payload = {
-                    contents: contents,
-                    generationConfig: {
-                        responseMimeType: "application/json",
-                        responseSchema: JSON_SCHEMA,
-                    },
-                    tools: [{ "google_search": {} }] // Use search grounding for up-to-date nutrition info
-                };
 
                 const apiUrl = `${API_URL_BASE}?key=${API_KEY}`;
                 
@@ -442,6 +439,9 @@
         // --- MODE HANDLERS ---
         modeCameraBtn.addEventListener('click', setupCameraMode);
         modeTextBtn.addEventListener('click', setupTextMode);
+        textPromptInput.addEventListener('input', () => {
+            captureButton.disabled = textPromptInput.value.trim().length < 10;
+        });
 
         // --- UTILITIES ---
         function displayError(message) {
