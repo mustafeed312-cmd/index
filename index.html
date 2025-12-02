@@ -148,9 +148,9 @@
         const API_URL_BASE = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent";
         
         // --- API Key Configuration ---
-        // CRITICAL: This MUST be empty when running inside the Canvas/Immersive environment
-        // It MUST contain your 'AIzaSy...' key when hosted externally (like GitHub Pages).
-        const API_KEY = ""; 
+        // FIX for 403 in Canvas: We manually insert the user's latest key to bypass the failed automatic injection.
+        // NOTE: If you are hosting this externally, this key should be used.
+        const API_KEY = "AIzaSyAiM38uZEiOpavsgMKuXCV9PnsYOq9TSNM"; 
 
         // UI Elements
         const videoFeed = document.getElementById('video-feed');
@@ -354,8 +354,20 @@
             displayError('');
             loadingIndicator.classList.remove('hidden');
             captureButton.disabled = true;
+            
+            // Resolve API Key for this specific run, prioritizing Canvas injection
+            let finalApiKey = API_KEY;
+            // Environment check for the injected key
+            if (typeof __api_key !== 'undefined' && __api_key.trim() !== '') {
+                finalApiKey = __api_key;
+            }
 
             try {
+                if (!finalApiKey && !API_KEY) {
+                     // If both local key and injected key are missing, throw a real 403 error.
+                     throw new Error("403"); 
+                }
+
                 const modelInstruction = `Analyze the following meal and its estimated portion sizes. Provide a comprehensive nutritional breakdown (calories, protein, fats, carbs) and a summary of its health benefits or dietary context. Ensure the response adheres strictly to the provided JSON schema.`;
                 
                 const userParts = [];
@@ -400,7 +412,7 @@
                     throw new Error("Missing input data.");
                 }
 
-                const apiUrl = `${API_URL_BASE}?key=${API_KEY}`;
+                const apiUrl = `${API_URL_BASE}?key=${finalApiKey}`;
                 
                 const result = await fetchWithRetry(apiUrl, {
                     method: 'POST',
@@ -434,9 +446,9 @@
 
                 let detailMsg = error.message;
                 if (detailMsg.includes("403")) {
-                    detailMsg = "Forbidden (403): The API key is invalid or has been revoked. Please replace the key in the code with a new one from Google AI Studio.";
+                    detailMsg = "Forbidden (403): Authentication failed. Please ensure the API Key is correct for external hosting, or try clearing the browser cache if running in the Canvas environment.";
                 } else if (detailMsg.includes("400")) {
-                    detailMsg = "Bad Request (400): The request structure is invalid. (This often happens when a manually entered key is present in the Canvas environment. Check the code comments for configuration instructions.)";
+                    detailMsg = "Bad Request (400): The request structure is invalid. (Check console for payload details.)";
                 } else if (detailMsg.includes("500")) {
                     detailMsg = "Server Error (500): The AI service is currently unavailable. Please try again later.";
                 } else if (detailMsg.includes("unexpected token")) {
